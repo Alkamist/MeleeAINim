@@ -1,11 +1,11 @@
-import button
-import analogaxis
-import analogslider
-import gccstate
-import melee
+import
+  button,
+  analogaxis,
+  analogslider,
+  gccstate,
+  melee
 
 export gccstate
-
 
 type
   Action* {.pure.} = enum

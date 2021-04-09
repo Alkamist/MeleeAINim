@@ -20,11 +20,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-{.passL: "enet64.lib".}
-{.passL: "-l winmm".}
-{.passL: "-l Ws2_32".}
-
-when defined(Linux):
+when defined(linux):
   import posix
 
   const ENET_SOCKET_NULL*: cint = -1
@@ -36,7 +32,11 @@ when defined(Linux):
       data*: pointer
       dataLength*: csize_t
 
-elif defined(Windows):
+elif defined(windows):
+  {.passL: "enet64.lib".}
+  {.passL: "-l winmm".}
+  {.passL: "-l Ws2_32".}
+
   import winlean
 
   let ENET_SOCKET_NULL*: cint = cast[cint](INVALID_SOCKET)

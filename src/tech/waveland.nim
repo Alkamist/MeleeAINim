@@ -1,7 +1,7 @@
-import std/math
-import ../../melee
-import ../../gccstate
-
+import
+  std/math,
+  ../../melee,
+  ../../gccstate
 
 const
   angleFromPi = arccos(0.95)

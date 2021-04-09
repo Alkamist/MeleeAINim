@@ -1,6 +1,6 @@
-import std/options
-import gccstate
-
+import
+  std/options,
+  gccstate
 
 type
   Character* {.pure.} = enum

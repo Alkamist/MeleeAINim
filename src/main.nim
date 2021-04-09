@@ -1,16 +1,16 @@
-import std/asyncdispatch
-import kbdinput
-import slippi
-import dolphincontroller
-import digitalmeleecontroller
-
+import
+  std/asyncdispatch,
+  kbdinput,
+  slippi,
+  dolphincontroller,
+  digitalmeleecontroller
 
 var
   isEnabled = true
   onOffToggle = false
   onOffTogglePrevious = false
   controller = initDigitalMeleeController()
-  dolphinCtrl = initDolphinController(1)
+  dolphinCtrl = initDolphinController(1, "")
   stream = initSlippiStream()
 
 stream.connect()

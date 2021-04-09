@@ -1,6 +1,6 @@
-import ../../melee
-import ../../gccstate
-
+import
+  ../../melee,
+  ../../gccstate
 
 type
   SpotDodge* = object

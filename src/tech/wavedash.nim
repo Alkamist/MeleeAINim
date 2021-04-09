@@ -1,7 +1,7 @@
-import ../../melee
-import ../../gccstate
-import waveland
-
+import
+  ../../melee,
+  ../../gccstate,
+  waveland
 
 type
   WaveDash* = object

@@ -1,16 +1,16 @@
-import std/json
-import std/math
-import std/tables
-import std/options
-import std/exitprocs
-import std/base64
-import std/times
-import enet
-import binaryreading
-import melee
+import
+  std/json,
+  std/math,
+  std/tables,
+  std/options,
+  std/exitprocs,
+  std/base64,
+  std/times,
+  enet,
+  binaryreading,
+  melee
 
 export melee
-
 
 type
   CommandKind {.pure.} = enum
@@ -290,7 +290,6 @@ proc connect*(slippi: var SlippiStream, cursor = none(int)) =
 
   echo "Slippi stream connection failed."
   enet_peer_reset(slippi.peer)
-
 
 when isMainModule:
   var stream = initSlippiStream()
