@@ -28,6 +28,7 @@ type
   SlippiStream* = object
     isConnected*: bool
     isInGame*: bool
+    isPausedOrFrozen*: bool
     nickName*: string
     dolphinVersion*: string
     extractionCodeVersion*: string
@@ -40,6 +41,7 @@ type
     commandLengths: Table[CommandKind, int]
     currentPayload: string
     currentCommandKind: CommandKind
+    lastFrameTime: Option[float]
 
 proc initSlippiStream*(address = "127.0.0.1",
                        port = 51441): SlippiStream =
@@ -65,6 +67,7 @@ proc `=destroy`(slippi: var SlippiStream) =
 proc disconnect*(slippi: var SlippiStream) =
   enet_peer_disconnect(slippi.peer, 0)
   slippi.isConnected = false
+  slippi.lastFrameTime = none(float)
 
 proc shiftPayloadToNextEvent(slippi: var SlippiStream) =
   slippi.currentPayload = slippi.currentPayload[slippi.commandLengths[slippi.currentCommandKind] + 1..<slippi.currentPayload.len]
@@ -146,6 +149,9 @@ proc readPreFrameUpdate(slippi: var SlippiStream) =
 
   slippi.shiftPayloadToNextEvent()
 
+  slippi.isPausedOrFrozen = false
+  slippi.lastFrameTime = some(cpuTime())
+
 proc readPostFrameUpdate(slippi: var SlippiStream) =
   let
     playerIndex = readUint8(slippi.currentPayload, 0x5).int
@@ -211,11 +217,16 @@ proc readPostFrameUpdate(slippi: var SlippiStream) =
 
 proc readGameEnd(slippi: var SlippiStream) =
   slippi.isInGame = false
+  slippi.isPausedOrFrozen = false
+  slippi.lastFrameTime = none(float)
   slippi.gameState.gameEndMethod = some(GameEndMethod(readUint8(slippi.currentPayload, 0x1)))
   slippi.gameState.lrasInitiator = readInt8(slippi.currentPayload, 0x2).int
   slippi.shiftPayloadToNextEvent()
 
 proc poll*(slippi: var SlippiStream): bool =
+  if slippi.lastFrameTime.isSome and cpuTime() - slippi.lastFrameTime.get > 0.05:
+    slippi.isPausedOrFrozen = true
+
   var event: ENetEvent
   discard enet_host_service(slippi.host, event.addr, 0)
 
@@ -244,16 +255,12 @@ proc poll*(slippi: var SlippiStream): bool =
 
 proc skipToRealTime(slippi: var SlippiStream) =
   let startTime = cpuTime()
-  var lastFrameTime = none(float)
   while true:
-    let frameEnded = slippi.poll()
-    if frameEnded:
-      if lastFrameTime.isSome and cpuTime() - lastFrameTime.get > 0.014:
-        echo "Skipped to realtime."
-        slippi.isInGame = true
-        return
-
-      lastFrameTime = some(cpuTime())
+    discard slippi.poll()
+    if slippi.lastFrameTime.isSome and cpuTime() - slippi.lastFrameTime.get > 0.014:
+      echo "Skipped to realtime."
+      slippi.isInGame = true
+      return
 
     if cpuTime() - startTime > 1.0 and not slippi.isInGame:
       echo "There is no game in progress."
