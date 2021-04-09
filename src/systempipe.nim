@@ -1,4 +1,4 @@
-when defined(linux):
+when defined(posix):
   type
     SystemPipe* = object
       file: File
