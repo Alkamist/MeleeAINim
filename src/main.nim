@@ -5,7 +5,7 @@ import
 
 var
   botController = GCCState()
-  dolphin = initDolphinController(2, "")
+  dolphin = initDolphinController(1, "")
   stream = initSlippiStream()
 
 stream.connect()
