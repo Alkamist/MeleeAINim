@@ -4,10 +4,14 @@ import
   std/tables,
   melee
 
-export melee
+export
+  math,
+  options,
+  tables,
+  melee
 
 type
-  CommandKind {.pure.} = enum
+  CommandKind* {.pure.} = enum
     Unknown = 0x10,
     EventPayloads = 0x35,
     GameStart = 0x36,
@@ -20,20 +24,16 @@ type
     GeckoList = 0x3d,
 
   SlippiParser* = object
-    gameState: GameState
-    data: string
+    gameState*: GameState
+    command*: CommandKind
+    data*: string
     readOffset: int
     numberOfCommands: int
     commandLengths: Table[CommandKind, int]
-    currentCommandKind: CommandKind
     extractionCodeVersion: string
-    frameSubscribers: seq[proc(gameState: GameState)]
 
 proc initSlippiParser*(): SlippiParser =
   result
-
-proc addFrameSubscriber*(slippi: var SlippiParser, subscriber: proc(gameState: GameState)) =
-  slippi.frameSubscribers.add(subscriber)
 
 proc swap(value: uint8): uint8 {.inline.} =
   value
@@ -96,7 +96,7 @@ proc readFloat64(slippi: SlippiParser, location: int): float64 {.inline.} =
   cast[float64](slippi.readUint64(location))
 
 proc shiftReadOffsetToNextEvent(slippi: var SlippiParser) {.inline.} =
-  slippi.readOffset += slippi.commandLengths[slippi.currentCommandKind] + 1
+  slippi.readOffset += slippi.commandLengths[slippi.command] + 1
 
 proc readEventPayloads(slippi: var SlippiParser) =
   let payloadSize = slippi.readUint8(0x1)
@@ -255,10 +255,10 @@ proc checkRawHeader(slippi: var SlippiParser) =
     if problem:
      raise newException(OSError, "Failed to parse raw header.")
 
-proc parseCommand(slippi: var SlippiParser) =
-  slippi.currentCommandKind = CommandKind(slippi.readUint8(0x0))
+proc parseCommand*(slippi: var SlippiParser) =
+  slippi.command = CommandKind(slippi.readUint8(0x0))
 
-  case slippi.currentCommandKind:
+  case slippi.command:
   of CommandKind.Unknown: discard
   of CommandKind.EventPayloads: slippi.readEventPayloads()
   of CommandKind.GameStart: slippi.readGameStart()
@@ -267,15 +267,23 @@ proc parseCommand(slippi: var SlippiParser) =
   of CommandKind.GameEnd: slippi.readGameEnd()
   of CommandKind.FrameStart: slippi.readFrameStart()
   of CommandKind.ItemUpdate: discard
-  of CommandKind.FrameBookend:
-    for subscriber in slippi.frameSubscribers:
-      subscriber(slippi.gameState)
+  of CommandKind.FrameBookend: discard
   of CommandKind.GeckoList: discard
 
-  if slippi.currentCommandKind != CommandKind.EventPayloads:
+  if slippi.command != CommandKind.EventPayloads:
     slippi.shiftReadOffsetToNextEvent()
 
-proc parseFile*(slippi: var SlippiParser, fileName: string) =
+template parsePacket*(slippi: var SlippiParser, packet: string, onCommand: untyped): untyped =
+  slippi.readOffset = 0x0
+  slippi.data = packet
+
+  let dataLength = slippi.data.len
+
+  while slippi.readOffset < dataLength:
+    slippi.parseCommand()
+    onCommand
+
+template parseFile*(slippi: var SlippiParser, fileName: string, onCommand: untyped): untyped =
   slippi.data = readFile(fileName)
   slippi.checkRawHeader()
 
@@ -288,13 +296,11 @@ proc parseFile*(slippi: var SlippiParser, fileName: string) =
 
   while slippi.readOffset < metaDataLocation:
     slippi.parseCommand()
+    onCommand
 
 when isMainModule:
   var slippi = initSlippiParser()
 
-  proc onFrameEnd(gameState: GameState) =
-    echo gameState.playerStates[0].xPosition
-
-  slippi.addFrameSubscriber(onFrameEnd)
-
-  slippi.parseFile("Game_20210405T153836.slp")
+  slippi.parseFile("Game_20210405T153836.slp"):
+    if slippi.command == CommandKind.FrameBookend:
+      echo slippi.gameState.playerStates[0].xPosition

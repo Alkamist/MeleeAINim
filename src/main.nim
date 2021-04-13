@@ -1,18 +1,18 @@
 import
-  slippi,
+  slippistream,
   gccstate,
   dolphincontroller
 
 var
   botController = GCCState()
   dolphin = initDolphinController(1, "")
-  stream = initSlippiStream()
+  slippi = initSlippiStream()
 
-stream.connect()
+slippi.connect()
 
 proc updateBotController() =
   botController.update()
-  botController.aButton.isPressed = stream.gameState.playerStates[0].actionState == Fall
+  botController.aButton.isPressed = slippi.gameState.playerStates[0].actionState == Fall
 
 proc writeToDolphin() =
   for button in GCCButton:
@@ -27,6 +27,6 @@ proc writeToDolphin() =
   dolphin.writeControllerState()
 
 while true:
-  if stream.poll():
+  slippi.poll:
     updateBotController()
     writeToDolphin()
